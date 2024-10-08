@@ -19,14 +19,15 @@ app.use(express.static('public'))
 
 app.use(session({
     store: new (pgSession(session))({
-        pool: db,  // Using the same PostgreSQL client
-        tableName: 'session'  // This is the session table we created manually
+        pool: db,
+        tableName: 'session',
+        pruneSessionInterval: 60*60 
     }),
-    secret: process.env.SESSION_SECRET,  // Keep secret in environment variable
-    resave: false,  // Do not resave session if it hasn't been modified
-    saveUninitialized: false,  // Don't save uninitialized sessions
+    secret: process.env.SESSION_SECRET,  
+    resave: false,  
+    saveUninitialized: false, 
     cookie: {
-        maxAge: 1000 * 60 * 60 
+        maxAge: 1000 * 60  *60
     }
 }));
 

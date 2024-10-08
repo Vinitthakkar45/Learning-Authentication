@@ -1,7 +1,7 @@
 import passport from "passport";
 
 const googleController = passport.authenticate('google', {
-    scope: ['profile', 'email', '']
+    scope: ['profile', 'email']
 });
 
 const googleRedirectController = (req, res) => {
@@ -11,10 +11,12 @@ const googleRedirectController = (req, res) => {
 const loginController = (req, res) => {
     res.render('login',{user:req.user});
 }
-const logoutController = (req, res) => {
+const logoutController = (req, res, next) => {
     req.logout(function (err) {
         if (err) { return next(err); }
-        res.redirect('/');
+        req.session.destroy(() => {
+            res.redirect('/');
+        });
     });
 }
 
