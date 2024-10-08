@@ -28,7 +28,10 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie:{
+      maxAge: 1000 * 60 * 60
+    }
   }));
 
 app.use(passport.initialize());
@@ -64,8 +67,15 @@ app.post("/register", async (req, res) => {
   bcrypt.hash(password, 10, async (err, hash) => {
     if (err) console.log("Error hashing the password: ", err);
     else {
-      await db.query("Insert into users_local (email,password) values ($1,$2)", [email, hash]);
-      res.render("secrets.ejs");
+      const result=await db.query("Insert into users_local (email,password) values ($1,$2) Returning *", [email, hash]);
+      const user=result.rows[0];
+      req.login(user, (err)=>{
+        if (err) {
+          console.log("Error logging in:", err);
+          return res.redirect("/login");
+        }
+        return res.redirect("/secrets");      
+      })
     }
   });
 });
