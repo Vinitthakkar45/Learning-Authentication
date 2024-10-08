@@ -2,6 +2,9 @@ import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
 import bcrypt from "bcrypt";
+import session from "express-session";
+import passport from "passport";
+import {Strategy} from "passport-local";
 
 const {Client} =pg;
 const db = new Client({
@@ -18,6 +21,25 @@ const port = 3000;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
+
+app.use(
+  session({
+    secret:"mysecret",
+    resave: false,
+    saveUninitialized:false
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.get("/secrets",(req,res)=>{
+  if(req.isAuthenticated()){
+    res.render("secrets.ejs")
+  }
+  else{
+    res.redirect("/login")
+  }
+})
 
 app.get("/", (req, res) => {
   res.render("home.ejs");
@@ -59,6 +81,8 @@ app.post("/login", async (req, res) => {
     else res.send("Invaild Password!");
   })
 });
+
+// app.use(new Strategy(function verify(username)))
 
 app.listen(port, () => {
   console.log(`Server running on port http://localhost:${port}`);

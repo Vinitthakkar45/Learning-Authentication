@@ -1,0 +1,10 @@
+<%- include('./partials/header') %>
+
+    <h1>Profile Page</h1>
+
+    <h2>Your Name : <%= user.name %></h2>
+    <h2>Your Email : <%= user.email %></h2>
+    <h2>Your Profile Image:</h2>
+    <img src="<%=user.image%>" alt="Profile Image" style="width: 150px; height: 150px; border-radius: 50%;"/>
+    
+<%- include('./partials/footer') %>
