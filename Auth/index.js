@@ -4,39 +4,41 @@ import pg from "pg";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import passport from "passport";
-import {Strategy} from "passport-local";
+import { Strategy } from "passport-local";
+import dotenv from "dotenv"
+dotenv.config();
 
-const {Client} =pg;
+const { Client } = pg;
 const db = new Client({
-  user: 'postgres',
-  password: 'Jay@69jalaram',
-  host: 'localhost',
-  port: 5432,
-  database: 'Authentication',
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  host: process.env.PGHOST,
+  port: process.env.PGPORT,
+  database: process.env.PGDATABASE
 });
 db.connect();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 app.use(
   session({
-    secret:"mysecret",
+    secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized:false
-}));
+    saveUninitialized: false
+  }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.get("/secrets",(req,res)=>{
-  if(req.isAuthenticated()){
+app.get("/secrets", (req, res) => {
+  if (req.isAuthenticated()) {
     res.render("secrets.ejs")
   }
-  else{
+  else {
     res.redirect("/login")
   }
 })
@@ -54,36 +56,50 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", async (req, res) => {
-  const email=req.body.username;
-  const password=req.body.password;
-  const pass= await db.query("select password from users where email= $1",[email]);
-  if(pass.rows[0]){res.send("User Already Exists");return;}
+  const email = req.body.email;
+  const password = req.body.password;
+  const pass = await db.query("select password from users_local where email= $1", [email]);
+  if (pass.rows[0]) { res.send("User Already Exists"); return; }
 
-  bcrypt.hash(password,10,async(err,hash)=>{
-    if(err)console.log("Error hashing the password: ",err);
-    else{
-      await db.query("Insert into users (email,password) values ($1,$2)",[email,hash]);
+  bcrypt.hash(password, 10, async (err, hash) => {
+    if (err) console.log("Error hashing the password: ", err);
+    else {
+      await db.query("Insert into users_local (email,password) values ($1,$2)", [email, hash]);
       res.render("secrets.ejs");
     }
   });
 });
 
-app.post("/login", async (req, res) => {
-  const email=req.body.username;
-  const password=req.body.password;
+app.post("/login",  (req, res, next) => {
+  req.body.username = req.body.email;next();},
+    passport.authenticate("local", {
+      successRedirect: "/secrets",
+      failureRedirect: "/login"
+    })
+);
 
-  const pass= await db.query("select password from users where email= $1",[email]);
-  if(!pass.rows[0]){res.send("User Not Found");return;}
-  const passs=pass.rows[0].password;
-  
-  bcrypt.compare(password,passs, async (err,result)=>{
-    if(result)res.render("secrets.ejs");
-    else res.send("Invaild Password!");
-  })
-});
+passport.use(
+  new Strategy(async function verify(email, password, cb) {
+    const user = await db.query("select * from users_local where email= $1", [email]);
+    if (!user.rows[0]) return (null, "User Not Found");
 
-// app.use(new Strategy(function verify(username)))
+    const passs = user.rows[0].password;
+    bcrypt.compare(password, passs, async (err, result) => {
+      if (err) return cb(err);
+      if (result) return cb(null, user);
+      else return cb(null, false);
+    })
+  }
+  ));
+
+passport.serializeUser((user, cb) => {
+  cb(null, user);
+})
+
+passport.deserializeUser((user, cb) => {
+  cb(null, user);
+})
 
 app.listen(port, () => {
   console.log(`Server running on port http://localhost:${port}`);
-});
+}); 
